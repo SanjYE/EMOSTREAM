@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Emoji Updates</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gradient-1: linear-gradient(45deg, #FF6B6B, #FFE66D);
+            --gradient-2: linear-gradient(45deg, #4ECDC4, #556270);
+            --primary: #6C63FF;
+            --secondary: #FF6B6B;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(
+                135deg, 
+                #833ab4 0%, 
+                #fd1d1d 50%, 
+                #405de6 100%
+            );
+            animation: gradientFlow 15s ease infinite;
+            background-size: 400% 400%;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .emoji-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .emoji-item {
+            margin: 10px;
+            text-align: center;
+            font-size: 32px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .emoji-item:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .emoji {
+            font-size: 48px;
+            display: block;
+        }
+
+        .count {
+            font-size: 24px;
+            color: white;
+            margin-top: 8px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        #status.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Emoji Updates</h1>
+    <label for="channel">Enter a channel name (e.g., "Channel1", "Channel2"):</label>
+    <input type="text" id="channel" />
+    <button onclick="connectToChannel()">Connect</button>
+    <div id="emoji-container"></div>
+
+    <script>
+        let ws;
+        const emojiData = {}; 
+
+        function connectToChannel() {
+            const channel = document.getElementById('channel').value.trim();
+
+            if (!channel) {
+                alert('Please enter a channel name.');
+                return;
+            }
+            if (ws) {
+                ws.close();
+            }
+            ws = new WebSocket('ws://localhost:8765');
+            ws.onopen = function() {
+                console.log('Connected to the WebSocket server.');
+                ws.send(JSON.stringify({ channel }));
+            };
+
+            ws.onmessage = function(event) {
+                console.log('Received data:', event.data);
+                const data = JSON.parse(event.data);
+                emojiData[data.emoji_type] = data.count;
+                updateUI();
+            };
+
+            ws.onclose = function() {
+                console.log('Connection to the server was closed.');
+            };
+        }
+
+        function updateUI() {
+            const container = document.getElementById('emoji-container');
+
+            for (const [emoji, count] of Object.entries(emojiData)) {
+                let item = document.getElementById(`emoji-${emoji}`);
+                if (!item) {
+                    item = document.createElement('div');
+                    item.id = `emoji-${emoji}`;
+                    item.className = 'emoji-item';
+
+                    const emojiSpan = document.createElement('div');
+                    emojiSpan.className = 'emoji';
+                    emojiSpan.textContent = emoji;
+
+                    const countSpan = document.createElement('div');
+                    countSpan.className = 'count';
+
+                    item.appendChild(emojiSpan);
+                    item.appendChild(countSpan);
+                    container.appendChild(item);
+                }
+                const countSpan = item.querySelector('.count');
+                countSpan.textContent = `Count: ${count}`;
+            }
+        }
+    </script>
+</body>
+</html>
